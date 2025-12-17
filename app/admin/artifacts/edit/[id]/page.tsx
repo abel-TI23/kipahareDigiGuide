@@ -259,7 +259,7 @@ export default function EditArtifactPage() {
                 }`}
               >
                 <option value="">Select a category</option>
-                {categories.map(cat => (
+                {ARTIFACT_CATEGORIES.map(cat => (
                   <option key={cat} value={cat}>
                     {cat}
                   </option>
