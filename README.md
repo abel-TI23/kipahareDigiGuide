@@ -6,11 +6,7 @@ A modern web application for exploring and managing Sundanese cultural artifacts
 
 ---
 
-## 📸 **Screenshots**
 
-*(Add screenshots here before submission)*
-
----
 
 ## ✨ **Features**
 
