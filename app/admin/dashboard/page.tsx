@@ -5,22 +5,80 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-export default function DashboardPage() {
-  const [stats] = useState({
-    totalArtifacts: 12,
-    totalScans: 234,
-    totalVisitors: 1547,
-    avgRating: 4.8,
-  });
+interface Artifact {
+  id: number;
+  name: string;
+  category: string;
+  created_at: string;
+}
 
-  const recentArtifacts = [
-    { id: 1, name: 'Kujang Pusaka', category: 'Senjata', date: '2025-10-28' },
-    { id: 2, name: 'Angklung Tradisional', category: 'Alat Musik', date: '2025-10-27' },
-    { id: 3, name: 'Wayang Golek', category: 'Seni Pertunjukan', date: '2025-10-26' },
-  ];
+export default function DashboardPage() {
+  const [stats, setStats] = useState({
+    totalArtifacts: 0,
+    totalScans: 0,
+    totalVisitors: 0,
+    avgRating: 0,
+  });
+  const [recentArtifacts, setRecentArtifacts] = useState<Artifact[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      // Fetch real stats from API
+      const statsResponse = await fetch('/api/stats');
+      const statsData = await statsResponse.json();
+
+      if (statsData.success) {
+        setStats({
+          totalArtifacts: statsData.data.artifacts || 0,
+          totalScans: statsData.data.qrScans || 0,
+          totalVisitors: statsData.data.visitors || 0,
+          avgRating: statsData.data.avgRating || 0,
+        });
+      }
+
+      // Fetch recent artifacts
+      const artifactsResponse = await fetch('/api/artifacts?limit=3');
+      const artifactsData = await artifactsResponse.json();
+      
+      console.log('🔍 Artifacts API response:', artifactsData);
+      console.log('🔍 Response structure:', {
+        hasSuccess: 'success' in artifactsData,
+        hasData: 'data' in artifactsData,
+        hasArtifacts: 'artifacts' in artifactsData,
+        successValue: artifactsData.success,
+        dataKeys: artifactsData.data ? Object.keys(artifactsData.data) : 'no data',
+      });
+      
+      // Handle different response structures
+      if (artifactsData.success && artifactsData.data) {
+        const artifactsList = artifactsData.data.artifacts || [];
+        console.log('✅ Setting artifacts from data.artifacts:', artifactsList);
+        setRecentArtifacts(artifactsList.slice(0, 3));
+      } else if (artifactsData.artifacts) {
+        console.log('✅ Setting artifacts from direct artifacts:', artifactsData.artifacts);
+        setRecentArtifacts(artifactsData.artifacts.slice(0, 3));
+      } else {
+        console.log('❌ No artifacts found in response');
+      }
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toISOString().split('T')[0];
+  };
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--museum-light-cream)' }}>
@@ -32,13 +90,13 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <Link href="/" className="flex items-center gap-3">
                 <div className="bg-[var(--museum-orange)] text-white px-4 py-2 rounded-lg font-bold text-xl">
-                  TH
+                  KP
                 </div>
                 <div>
                   <div className="text-xl md:text-2xl font-bold" style={{ color: 'var(--museum-brown)' }}>
                     Admin Dashboard
                   </div>
-                  <p className="text-xs md:text-sm text-gray-600">Kipahare DigiGuide</p>
+                  <p className="text-xs md:text-sm text-gray-600">Ki Pahare DigiGuide</p>
                 </div>
               </Link>
               
@@ -58,7 +116,7 @@ export default function DashboardPage() {
                 Dashboard
               </Link>
               <Link 
-                href="/admin/artifacts" 
+                href="/admin/artifacts/manage" 
                 className="px-4 py-2 rounded-lg font-semibold hover:bg-white transition-all"
                 style={{ color: 'var(--museum-brown)' }}
               >
@@ -98,14 +156,16 @@ export default function DashboardPage() {
           <div className="museum-card p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="text-4xl">🏛️</div>
-              <div className="text-sm font-semibold px-3 py-1 rounded-full"
-                   style={{ background: 'var(--museum-light-cream)', color: 'var(--museum-brown)' }}>
-                +12%
-              </div>
+              {stats.totalArtifacts > 0 && (
+                <div className="text-sm font-semibold px-3 py-1 rounded-full"
+                     style={{ background: 'var(--museum-light-cream)', color: 'var(--museum-brown)' }}>
+                  Active
+                </div>
+              )}
             </div>
             <h3 className="text-gray-600 text-sm mb-1">Total Artifacts</h3>
             <p className="text-3xl md:text-4xl font-bold" style={{ color: 'var(--museum-brown)' }}>
-              {stats.totalArtifacts}
+              {loading ? '...' : stats.totalArtifacts}
             </p>
           </div>
 
@@ -113,13 +173,13 @@ export default function DashboardPage() {
           <div className="museum-card p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="text-4xl">📱</div>
-              <div className="text-sm font-semibold px-3 py-1 rounded-full"
-                   style={{ background: 'var(--museum-light-cream)', color: 'var(--museum-brown)' }}>
-                +23%
+              <div className="text-sm font-semibold px-3 py-1 rounded-full text-gray-400"
+                   style={{ background: 'var(--museum-light-cream)' }}>
+                Soon
               </div>
             </div>
             <h3 className="text-gray-600 text-sm mb-1">QR Scans</h3>
-            <p className="text-3xl md:text-4xl font-bold" style={{ color: 'var(--museum-brown)' }}>
+            <p className="text-3xl md:text-4xl font-bold text-gray-400">
               {stats.totalScans}
             </p>
           </div>
@@ -128,13 +188,13 @@ export default function DashboardPage() {
           <div className="museum-card p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="text-4xl">👥</div>
-              <div className="text-sm font-semibold px-3 py-1 rounded-full"
-                   style={{ background: 'var(--museum-light-cream)', color: 'var(--museum-brown)' }}>
-                +8%
+              <div className="text-sm font-semibold px-3 py-1 rounded-full text-gray-400"
+                   style={{ background: 'var(--museum-light-cream)' }}>
+                Soon
               </div>
             </div>
             <h3 className="text-gray-600 text-sm mb-1">Total Visitors</h3>
-            <p className="text-3xl md:text-4xl font-bold" style={{ color: 'var(--museum-brown)' }}>
+            <p className="text-3xl md:text-4xl font-bold text-gray-400">
               {stats.totalVisitors}
             </p>
           </div>
@@ -143,13 +203,13 @@ export default function DashboardPage() {
           <div className="museum-card p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="text-4xl">⭐</div>
-              <div className="text-sm font-semibold px-3 py-1 rounded-full"
-                   style={{ background: 'var(--museum-light-cream)', color: 'var(--museum-brown)' }}>
-                +0.3
+              <div className="text-sm font-semibold px-3 py-1 rounded-full text-gray-400"
+                   style={{ background: 'var(--museum-light-cream)' }}>
+                Soon
               </div>
             </div>
             <h3 className="text-gray-600 text-sm mb-1">Avg. Rating</h3>
-            <p className="text-3xl md:text-4xl font-bold" style={{ color: 'var(--museum-brown)' }}>
+            <p className="text-3xl md:text-4xl font-bold text-gray-400">
               {stats.avgRating}
             </p>
           </div>
@@ -163,32 +223,47 @@ export default function DashboardPage() {
               <h2 className="text-xl md:text-2xl font-bold" style={{ color: 'var(--museum-brown)' }}>
                 Recent Artifacts
               </h2>
-              <Link href="/admin/artifacts" className="text-sm font-semibold hover:underline"
+              <Link href="/admin/artifacts/manage" className="text-sm font-semibold hover:underline"
                     style={{ color: 'var(--museum-orange)' }}>
                 View All →
               </Link>
             </div>
 
             <div className="space-y-4">
-              {recentArtifacts.map((artifact) => (
-                <div key={artifact.id} 
-                     className="flex items-center justify-between p-4 rounded-lg hover:shadow-md transition-all"
-                     style={{ background: 'var(--museum-light-cream)' }}>
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-lg flex items-center justify-center text-2xl"
-                         style={{ background: 'white' }}>
-                      🏛️
-                    </div>
-                    <div>
-                      <h3 className="font-semibold" style={{ color: 'var(--museum-brown)' }}>
-                        {artifact.name}
-                      </h3>
-                      <p className="text-sm text-gray-600">{artifact.category}</p>
-                    </div>
-                  </div>
-                  <span className="text-xs text-gray-500 hidden sm:block">{artifact.date}</span>
+              {loading ? (
+                <div className="text-center py-8 text-gray-500">Loading...</div>
+              ) : recentArtifacts.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500 mb-4">No artifacts yet</p>
+                  <Link href="/admin/artifacts/add" 
+                        className="inline-block px-4 py-2 rounded-lg font-semibold text-white hover:opacity-90"
+                        style={{ background: 'var(--museum-orange)' }}>
+                    Add Your First Artifact
+                  </Link>
                 </div>
-              ))}
+              ) : (
+                recentArtifacts.map((artifact) => (
+                  <div key={artifact.id} 
+                       className="flex items-center justify-between p-4 rounded-lg hover:shadow-md transition-all"
+                       style={{ background: 'var(--museum-light-cream)' }}>
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-lg flex items-center justify-center text-2xl"
+                           style={{ background: 'white' }}>
+                        🏛️
+                      </div>
+                      <div>
+                        <h3 className="font-semibold" style={{ color: 'var(--museum-brown)' }}>
+                          {artifact.name}
+                        </h3>
+                        <p className="text-sm text-gray-600">{artifact.category}</p>
+                      </div>
+                    </div>
+                    <span className="text-xs text-gray-500 hidden sm:block">
+                      {formatDate(artifact.created_at)}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -199,23 +274,23 @@ export default function DashboardPage() {
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <button className="p-6 rounded-lg text-left hover:shadow-lg transition-all"
+              <Link href="/admin/artifacts/add" className="p-6 rounded-lg text-left hover:shadow-lg transition-all"
                       style={{ background: 'var(--museum-light-cream)' }}>
                 <div className="text-3xl mb-3">➕</div>
                 <h3 className="font-bold mb-1" style={{ color: 'var(--museum-brown)' }}>
                   Add Artifact
                 </h3>
                 <p className="text-sm text-gray-600">Create new artifact entry</p>
-              </button>
+              </Link>
 
-              <button className="p-6 rounded-lg text-left hover:shadow-lg transition-all"
+              <Link href="/admin/artifacts/manage" className="p-6 rounded-lg text-left hover:shadow-lg transition-all"
                       style={{ background: 'var(--museum-light-cream)' }}>
-                <div className="text-3xl mb-3">📊</div>
+                <div className="text-3xl mb-3">📝</div>
                 <h3 className="font-bold mb-1" style={{ color: 'var(--museum-brown)' }}>
-                  View Reports
+                  Manage Artifacts
                 </h3>
-                <p className="text-sm text-gray-600">Analytics & insights</p>
-              </button>
+                <p className="text-sm text-gray-600">View, edit & delete artifacts</p>
+              </Link>
 
               <button className="p-6 rounded-lg text-left hover:shadow-lg transition-all"
                       style={{ background: 'var(--museum-light-cream)' }}>

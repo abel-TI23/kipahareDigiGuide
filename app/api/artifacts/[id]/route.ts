@@ -4,7 +4,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@vercel/postgres';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../../auth/[...nextauth]/route';
+import { supabaseDb } from '@/lib/supabase';
 import { createSuccessResponse, createErrorResponse } from '@/lib/utils';
 import type { Artifact } from '@/types';
 
@@ -27,20 +29,14 @@ export async function GET(
       );
     }
 
-    const result = await sql`
-      SELECT * FROM artifacts 
-      WHERE id = ${artifactId}
-      LIMIT 1
-    `;
+    const artifact = await supabaseDb.getArtifactById(artifactId);
 
-    if (result.rows.length === 0) {
+    if (!artifact) {
       return NextResponse.json(
         createErrorResponse('Artifact not found', 404),
         { status: 404 }
       );
     }
-
-    const artifact = result.rows[0] as Artifact;
 
     return NextResponse.json(createSuccessResponse(artifact));
   } catch (error) {
@@ -54,13 +50,22 @@ export async function GET(
 
 /**
  * PUT /api/artifacts/[id]
- * Update an existing artifact
+ * Update an existing artifact (requires authentication)
  */
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Check authentication
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json(
+        createErrorResponse('Unauthorized - Please login', 401),
+        { status: 401 }
+      );
+    }
+
     const { id } = await params;
     const artifactId = parseInt(id);
 
@@ -74,35 +79,23 @@ export async function PUT(
     const body = await request.json();
     const { name, category, origin, year, description, image_url, audio_url } = body;
 
-    // Check if artifact exists
-    const existingResult = await sql`
-      SELECT id FROM artifacts WHERE id = ${artifactId}
-    `;
+    // Update artifact in Supabase
+    const artifact = await supabaseDb.updateArtifact(artifactId, {
+      name,
+      category,
+      origin,
+      year,
+      description,
+      image_url,
+      audio_url,
+    });
 
-    if (existingResult.rows.length === 0) {
+    if (!artifact) {
       return NextResponse.json(
         createErrorResponse('Artifact not found', 404),
         { status: 404 }
       );
     }
-
-    // Update artifact
-    const result = await sql`
-      UPDATE artifacts
-      SET
-        name = COALESCE(${name}, name),
-        category = COALESCE(${category}, category),
-        origin = COALESCE(${origin}, origin),
-        year = COALESCE(${year}, year),
-        description = COALESCE(${description}, description),
-        image_url = COALESCE(${image_url}, image_url),
-        audio_url = COALESCE(${audio_url}, audio_url),
-        updated_at = NOW()
-      WHERE id = ${artifactId}
-      RETURNING *
-    `;
-
-    const artifact = result.rows[0] as Artifact;
 
     return NextResponse.json(
       createSuccessResponse(artifact, 'Artifact updated successfully')
@@ -118,13 +111,22 @@ export async function PUT(
 
 /**
  * DELETE /api/artifacts/[id]
- * Delete an artifact and its associated QR codes and feedback
+ * Delete an artifact (requires authentication)
  */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Check authentication
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json(
+        createErrorResponse('Unauthorized - Please login', 401),
+        { status: 401 }
+      );
+    }
+
     const { id } = await params;
     const artifactId = parseInt(id);
 
@@ -135,22 +137,15 @@ export async function DELETE(
       );
     }
 
-    // Check if artifact exists
-    const existingResult = await sql`
-      SELECT id FROM artifacts WHERE id = ${artifactId}
-    `;
+    // Delete artifact from Supabase
+    const result = await supabaseDb.deleteArtifact(artifactId);
 
-    if (existingResult.rows.length === 0) {
+    if (!result.success) {
       return NextResponse.json(
         createErrorResponse('Artifact not found', 404),
         { status: 404 }
       );
     }
-
-    // Delete artifact (CASCADE will remove related QR codes and feedback)
-    await sql`
-      DELETE FROM artifacts WHERE id = ${artifactId}
-    `;
 
     return NextResponse.json(
       createSuccessResponse(

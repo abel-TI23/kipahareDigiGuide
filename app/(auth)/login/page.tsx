@@ -1,5 +1,5 @@
 /**
- * Login Page - Responsive Design
+ * Login Page - Responsive Design with NextAuth
  * Beautiful login page with museum theme
  */
 
@@ -7,25 +7,41 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { signIn } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     username: '',
     password: '',
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError('');
     
-    // Simulate login
-    setTimeout(() => {
-      console.log('Login attempt:', formData);
+    try {
+      const result = await signIn('credentials', {
+        username: formData.username,
+        password: formData.password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError('Invalid username or password');
+        setIsLoading(false);
+      } else if (result?.ok) {
+        // Login successful
+        router.push('/admin/dashboard');
+      }
+    } catch (err) {
+      setError('An error occurred. Please try again.');
       setIsLoading(false);
-      // Redirect to admin dashboard
-      window.location.href = '/admin/dashboard';
-    }, 1000);
+    }
   };
 
   return (
@@ -39,11 +55,11 @@ export default function LoginPage() {
           <Link href="/" className="inline-block">
             <div className="flex items-center justify-center gap-3 mb-4">
               <div className="bg-[var(--museum-orange)] text-white px-6 py-3 rounded-lg font-bold text-2xl">
-                TH
+                KP
               </div>
             </div>
             <h1 className="text-3xl md:text-4xl font-bold" style={{ color: 'var(--museum-brown)' }}>
-              Kipahare DigiGuide
+              Ki Pahare DigiGuide
             </h1>
             <p className="text-gray-600 mt-2">Museum Admin Portal</p>
           </Link>
@@ -59,6 +75,13 @@ export default function LoginPage() {
             Enter your credentials to access the dashboard
           </p>
 
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+              {error}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Username Field */}
             <div>
@@ -72,7 +95,7 @@ export default function LoginPage() {
                 required
                 value={formData.username}
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 transition-all"
+                className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 transition-all bg-white text-gray-900"
                 style={{ borderColor: '#E0D5C7' }}
                 onFocus={(e) => e.target.style.borderColor = 'var(--museum-orange)'}
                 onBlur={(e) => e.target.style.borderColor = '#E0D5C7'}
@@ -92,7 +115,7 @@ export default function LoginPage() {
                 required
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 transition-all"
+                className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 transition-all bg-white text-gray-900"
                 style={{ borderColor: '#E0D5C7' }}
                 onFocus={(e) => e.target.style.borderColor = 'var(--museum-orange)'}
                 onBlur={(e) => e.target.style.borderColor = '#E0D5C7'}
@@ -129,8 +152,22 @@ export default function LoginPage() {
             </button>
           </form>
 
+          {/* Register Link */}
+          <div className="mt-6 text-center">
+            <p className="text-gray-600">
+              Don't have an account?{' '}
+              <Link
+                href="/register"
+                className="font-semibold hover:underline"
+                style={{ color: 'var(--museum-orange)' }}
+              >
+                Register here
+              </Link>
+            </p>
+          </div>
+
           {/* Divider */}
-          <div className="mt-8 text-center">
+          <div className="mt-6 text-center">
             <Link 
               href="/"
               className="text-gray-600 hover:underline text-sm"

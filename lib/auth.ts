@@ -1,5 +1,5 @@
 /**
- * Kipahare DigiGuide - NextAuth Configuration
+ * Ki Pahare DigiGuide - NextAuth Configuration
  * Authentication setup for admin users
  */
 

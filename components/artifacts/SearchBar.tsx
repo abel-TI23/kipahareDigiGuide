@@ -32,6 +32,7 @@ export default function SearchBar({
             style={{
               borderColor: '#E0D5C7',
               background: 'white',
+              color: '#1F2937',
             }}
             onFocus={(e) => {
               e.target.style.borderColor = 'var(--museum-orange)';
@@ -47,10 +48,11 @@ export default function SearchBar({
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="w-full px-4 py-3 text-sm sm:text-base border-2 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 transition-all"
+            className="w-full px-4 py-3 text-sm sm:text-base border-2 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 transition-all text-gray-900"
             style={{
               borderColor: '#E0D5C7',
               background: 'white',
+              color: '#1F2937',
               backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23D2691E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
               backgroundRepeat: 'no-repeat',
               backgroundPosition: 'right 12px center',
@@ -65,7 +67,7 @@ export default function SearchBar({
             }}
           >
             {categories.map((category) => (
-              <option key={category} value={category}>
+              <option key={category} value={category} className="text-gray-900 bg-white">
                 {category}
               </option>
             ))}

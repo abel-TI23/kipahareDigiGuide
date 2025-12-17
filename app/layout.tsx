@@ -17,7 +17,7 @@ const lora = Lora({
 });
 
 export const metadata: Metadata = {
-  title: "Kipahare DigiGuide - Digital Museum Collection",
+  title: "Ki Pahare DigiGuide - Digital Museum Collection",
   description: "Explore historical treasures and ancient artifacts with our digital museum guide",
 };
 

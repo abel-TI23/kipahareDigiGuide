@@ -1,36 +1,167 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🏛️ Ki Pahare DigiGuide
 
-## Getting Started
+**Digital Museum Collection - Sundanese Cultural Heritage**
 
-First, run the development server:
+A modern web application for exploring and managing Sundanese cultural artifacts with QR code integration and admin management system.
 
+---
+
+## 📸 **Screenshots**
+
+*(Add screenshots here before submission)*
+
+---
+
+## ✨ **Features**
+
+### 🔐 Authentication System
+- User registration with validation
+- Secure login system
+- Password hashing with bcryptjs
+- Duplicate email/username checking
+
+### 📦 CRUD Operations
+- **Create:** Add new artifacts with complete information
+- **Read:** Browse artifacts with search and category filters
+- **Update:** Edit existing artifact data
+- **Delete:** Remove artifacts with confirmation dialog
+
+### 🎨 User Interface
+- Museum-themed design (Ki Pahare branding)
+- Responsive layout (mobile & desktop)
+- Toast notifications for user feedback
+- Confirmation modals for critical actions
+- Search and filter functionality
+
+### 🗄️ Database
+- Supabase PostgreSQL integration
+- Persistent data storage
+- Row Level Security (RLS)
+- Real-time data synchronization
+
+---
+
+## 🛠️ **Tech Stack**
+
+- **Framework:** Next.js 16.0.0 (App Router)
+- **Language:** TypeScript
+- **Styling:** Tailwind CSS v4
+- **Database:** Supabase (PostgreSQL)
+- **Authentication:** bcryptjs
+- **Deployment:** Vercel
+
+---
+
+## 🚀 **Getting Started**
+
+### Prerequisites
+- Node.js 18+ installed
+- Supabase account
+- npm or yarn
+
+### Installation
+
+1. **Clone the repository**
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/abel-TI23/kipahareDigiGuide.git
+cd kipahareDigiGuide
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. **Install dependencies**
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. **Setup environment variables**
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Create `.env.local` file:
+```env
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 
-## Learn More
+# NextAuth
+NEXTAUTH_SECRET=your-secret-key
+NEXTAUTH_URL=http://localhost:3000
+```
 
-To learn more about Next.js, take a look at the following resources:
+4. **Setup Supabase Database**
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Go to Supabase SQL Editor and run:
+```sql
+-- See PROJECT_DOCUMENTATION_EN.md for complete SQL schema
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+5. **Run development server**
+```bash
+npm run dev
+```
 
-## Deploy on Vercel
+Open [http://localhost:3000](http://localhost:3000)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📁 **Project Structure**
+
+```
+app/
+├── (auth)/              # Authentication pages
+├── admin/               # Admin dashboard & CRUD
+├── api/                 # API routes
+└── page.tsx            # Homepage
+
+components/
+├── ui/                 # UI components (Toast, Modal)
+└── artifacts/          # Artifact components
+
+lib/
+├── supabase.ts         # Database client
+├── dummy-data.ts       # Static data
+└── utils.ts            # Helper functions
+```
+
+---
+
+## 📚 **Documentation**
+
+- [Setup Guide](SETUP.md)
+- [Project Documentation (ID)](PROJECT_DOCUMENTATION.md)
+- [Project Documentation (EN)](PROJECT_DOCUMENTATION_EN.md)
+- [Project Status](PROJECT_STATUS.md)
+
+---
+
+## 🎓 **Academic Project**
+
+**Course:** Web Based Application Development  
+**Session:** 11 - Routing and URL Handling  
+**Institution:** Nusa Putra University  
+**Lecturer:** Anggun Pergina, M.Kom
+
+**Assignment Requirements:**
+1. ✅ Create authentication system (login + register)
+2. ✅ Implement CRUD operations
+3. ✅ Use proper routing structure
+4. ✅ Submit documentation in PDF
+
+---
+
+## 👨‍💻 **Author**
+
+**Abel-TI23**  
+Nusa Putra University
+
+---
+
+## 📄 **License**
+
+This project is created for educational purposes.
+
+---
+
+## 🙏 **Acknowledgments**
+
+- Nusa Putra University
+- Anggun Pergina, M.Kom (Lecturer)
+- Supabase for database hosting
+- Vercel for deployment platform

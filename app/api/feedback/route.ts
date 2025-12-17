@@ -4,9 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@vercel/postgres';
-import { createSuccessResponse, createErrorResponse, isValidRating } from '@/lib/utils';
-import type { Feedback } from '@/types';
+import { supabase } from '@/lib/supabase';
+import { isValidRating } from '@/lib/utils';
 
 /**
  * GET /api/feedback
@@ -19,50 +18,40 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    let result;
+    let query = supabase
+      .from('feedback')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (artifactId) {
-      // Get feedback for specific artifact
-      result = await sql`
-        SELECT f.*, a.name as artifact_name
-        FROM feedback f
-        LEFT JOIN artifacts a ON f.artifact_id = a.id
-        WHERE f.artifact_id = ${parseInt(artifactId)}
-        ORDER BY f.created_at DESC
-        LIMIT ${limit} OFFSET ${offset}
-      `;
-    } else {
-      // Get all feedback
-      result = await sql`
-        SELECT f.*, a.name as artifact_name
-        FROM feedback f
-        LEFT JOIN artifacts a ON f.artifact_id = a.id
-        ORDER BY f.created_at DESC
-        LIMIT ${limit} OFFSET ${offset}
-      `;
+      query = query.eq('artifact_id', parseInt(artifactId));
     }
 
-    // Get total count
-    const countQuery = artifactId
-      ? sql`SELECT COUNT(*) as total FROM feedback WHERE artifact_id = ${parseInt(artifactId)}`
-      : sql`SELECT COUNT(*) as total FROM feedback`;
+    const { data, error, count } = await query;
 
-    const countResult = await countQuery;
-    const total = parseInt(countResult.rows[0].total);
+    if (error) {
+      console.error('Error fetching feedback:', error);
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 500 }
+      );
+    }
 
-    return NextResponse.json(
-      createSuccessResponse({
-        feedback: result.rows,
-        total,
-        page: Math.floor(offset / limit) + 1,
-        pageSize: limit,
-        totalPages: Math.ceil(total / limit),
-      })
-    );
-  } catch (error) {
+    return NextResponse.json({
+      success: true,
+      data: data || [],
+      pagination: {
+        total: count || 0,
+        limit,
+        offset,
+      }
+    });
+
+  } catch (error: any) {
     console.error('GET /api/feedback error:', error);
     return NextResponse.json(
-      createErrorResponse(error, 500),
+      { success: false, error: error.message || 'Internal server error' },
       { status: 500 }
     );
   }
@@ -75,12 +64,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { artifact_id, visitor_name, rating, comment } = body;
+    const { artifact_id, visitor_name, email, rating, comment } = body;
 
     // Validate required fields
     if (!artifact_id || !rating) {
       return NextResponse.json(
-        createErrorResponse('artifact_id and rating are required', 400),
+        { success: false, error: 'artifact_id and rating are required' },
         { status: 400 }
       );
     }
@@ -88,72 +77,43 @@ export async function POST(request: NextRequest) {
     // Validate rating range
     if (!isValidRating(rating)) {
       return NextResponse.json(
-        createErrorResponse('Rating must be between 1 and 5', 400),
+        { success: false, error: 'Rating must be between 1 and 5' },
         { status: 400 }
       );
     }
 
-    // Verify artifact exists
-    const artifactResult = await sql`
-      SELECT id FROM artifacts WHERE id = ${artifact_id}
-    `;
+    // Insert feedback
+    const { data, error } = await supabase
+      .from('feedback')
+      .insert([{
+        artifact_id: parseInt(artifact_id),
+        visitor_name: visitor_name || null,
+        email: email || null,
+        rating: parseInt(rating),
+        comment: comment || null,
+      }])
+      .select()
+      .single();
 
-    if (artifactResult.rows.length === 0) {
+    if (error) {
+      console.error('Error inserting feedback:', error);
       return NextResponse.json(
-        createErrorResponse('Artifact not found', 404),
-        { status: 404 }
+        { success: false, error: error.message },
+        { status: 500 }
       );
     }
 
-    // Insert feedback
-    const result = await sql`
-      INSERT INTO feedback (artifact_id, visitor_name, rating, comment)
-      VALUES (
-        ${artifact_id},
-        ${visitor_name || null},
-        ${rating},
-        ${comment || null}
-      )
-      RETURNING *
-    `;
+    return NextResponse.json({
+      success: true,
+      data,
+      message: 'Thank you for your feedback!'
+    }, { status: 201 });
 
-    const feedback = result.rows[0] as Feedback;
-
-    return NextResponse.json(
-      createSuccessResponse(feedback, 'Thank you for your feedback!'),
-      { status: 201 }
-    );
-  } catch (error) {
+  } catch (error: any) {
     console.error('POST /api/feedback error:', error);
     return NextResponse.json(
-      createErrorResponse(error, 500),
+      { success: false, error: error.message || 'Internal server error' },
       { status: 500 }
     );
-  }
-}
-
-/**
- * GET /api/feedback/stats
- * Get feedback statistics for an artifact
- */
-export async function getStats(artifactId: number) {
-  try {
-    const result = await sql`
-      SELECT
-        COUNT(*) as total_feedback,
-        AVG(rating)::DECIMAL(10,2) as average_rating,
-        COUNT(CASE WHEN rating = 5 THEN 1 END) as five_star,
-        COUNT(CASE WHEN rating = 4 THEN 1 END) as four_star,
-        COUNT(CASE WHEN rating = 3 THEN 1 END) as three_star,
-        COUNT(CASE WHEN rating = 2 THEN 1 END) as two_star,
-        COUNT(CASE WHEN rating = 1 THEN 1 END) as one_star
-      FROM feedback
-      WHERE artifact_id = ${artifactId}
-    `;
-
-    return result.rows[0];
-  } catch (error) {
-    console.error('Feedback stats error:', error);
-    throw error;
   }
 }

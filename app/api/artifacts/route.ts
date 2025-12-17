@@ -1,11 +1,14 @@
 /**
- * Artifacts API - GET all artifacts
+ * Artifacts API - GET all artifacts with pagination and server-side filtering
  * Returns a list of all artifacts with optional filtering
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@vercel/postgres';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../auth/[...nextauth]/route';
+import { supabaseDb } from '@/lib/supabase';
 import { createSuccessResponse, createErrorResponse } from '@/lib/utils';
+import { PAGINATION } from '@/lib/constants';
 import type { Artifact } from '@/types';
 
 export async function GET(request: NextRequest) {
@@ -13,59 +16,43 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const category = searchParams.get('category');
     const search = searchParams.get('search');
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const offset = parseInt(searchParams.get('offset') || '0');
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = Math.min(
+      parseInt(searchParams.get('limit') || String(PAGINATION.DEFAULT_PAGE_SIZE)),
+      PAGINATION.MAX_PAGE_SIZE
+    );
+    const offset = (page - 1) * limit;
 
-    let query = sql`
-      SELECT 
-        id, name, category, origin, year, description,
-        image_url, audio_url, created_at, updated_at
-      FROM artifacts
-      WHERE 1=1
-    `;
+    // Get all artifacts from Supabase
+    let artifacts = await supabaseDb.getAllArtifacts();
 
-    // Add category filter
-    if (category) {
-      query = sql`
-        SELECT * FROM artifacts 
-        WHERE category = ${category}
-        ORDER BY created_at DESC
-        LIMIT ${limit} OFFSET ${offset}
-      `;
-    }
-    // Add search filter
-    else if (search) {
-      query = sql`
-        SELECT * FROM artifacts 
-        WHERE name ILIKE ${'%' + search + '%'} 
-        OR description ILIKE ${'%' + search + '%'}
-        ORDER BY created_at DESC
-        LIMIT ${limit} OFFSET ${offset}
-      `;
-    }
-    // Default query
-    else {
-      query = sql`
-        SELECT * FROM artifacts 
-        ORDER BY created_at DESC
-        LIMIT ${limit} OFFSET ${offset}
-      `;
+    // Server-side filtering by category
+    if (category && category !== 'All Categories') {
+      artifacts = artifacts.filter(a => a.category === category);
     }
 
-    const result = await query;
-    const artifacts = result.rows as Artifact[];
+    // Server-side search (name or description)
+    if (search && search.trim()) {
+      const searchLower = search.toLowerCase();
+      artifacts = artifacts.filter(a => 
+        a.name.toLowerCase().includes(searchLower) || 
+        a.description.toLowerCase().includes(searchLower)
+      );
+    }
 
-    // Get total count for pagination
-    const countResult = await sql`SELECT COUNT(*) as total FROM artifacts`;
-    const total = parseInt(countResult.rows[0].total);
+    // Apply pagination
+    const total = artifacts.length;
+    const paginatedArtifacts = artifacts.slice(offset, offset + limit);
 
     return NextResponse.json(
       createSuccessResponse({
-        artifacts,
-        total,
-        page: Math.floor(offset / limit) + 1,
-        pageSize: limit,
-        totalPages: Math.ceil(total / limit),
+        artifacts: paginatedArtifacts,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
       })
     );
   } catch (error) {
@@ -79,10 +66,19 @@ export async function GET(request: NextRequest) {
 
 /**
  * Create new artifact
- * Requires admin authentication
+ * Requires admin authentication (protected by middleware)
  */
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication (middleware already handles this, but double-check)
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json(
+        createErrorResponse('Unauthorized - Please login', 401),
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const { name, category, origin, year, description, image_url, audio_url } = body;
 
@@ -94,19 +90,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Insert artifact
-    const result = await sql`
-      INSERT INTO artifacts (
-        name, category, origin, year, description, image_url, audio_url
-      )
-      VALUES (
-        ${name}, ${category}, ${origin}, ${year}, ${description},
-        ${image_url || null}, ${audio_url || null}
-      )
-      RETURNING *
-    `;
-
-    const artifact = result.rows[0] as Artifact;
+    // Insert artifact to Supabase
+    const artifact = await supabaseDb.createArtifact({
+      name,
+      category,
+      origin,
+      year,
+      description,
+      image_url: image_url || '',
+      audio_url: audio_url || '',
+    });
 
     return NextResponse.json(
       createSuccessResponse(artifact, 'Artifact created successfully'),

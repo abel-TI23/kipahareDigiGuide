@@ -1,12 +1,30 @@
 /**
- * Kipahare DigiGuide - Landing Page
+ * Ki Pahare DigiGuide - Landing Page
  * Welcome page with QR scanner and artifact browser
  */
 
+'use client';
+
+import { useEffect } from 'react';
 import Link from 'next/link';
 import ArtifactGrid from '../components/artifacts/ArtifactGrid';
 
 export default function HomePage() {
+  useEffect(() => {
+    // Track visitor on homepage load
+    trackVisitor();
+  }, []);
+
+  const trackVisitor = async () => {
+    try {
+      await fetch('/api/visitors/track', {
+        method: 'POST',
+      });
+    } catch (error) {
+      console.error('Failed to track visitor:', error);
+    }
+  };
+
   return (
     <main className="min-h-screen" style={{ background: 'var(--museum-light-cream)' }}>
       {/* Header */}
@@ -15,11 +33,11 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
             <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-start">
               <div className="bg-[var(--museum-orange)] text-white px-3 py-2 sm:px-4 sm:py-2 rounded-lg font-bold text-lg sm:text-xl">
-                KH
+                KP
               </div>
               <div className="flex-1 sm:flex-initial">
                 <div className="text-xl sm:text-2xl md:text-3xl font-bold" style={{ color: 'var(--museum-brown)' }}>
-                  Kipahare DigiGuide
+                  Ki Pahare DigiGuide
                 </div>
                 <p className="text-xs sm:text-sm text-gray-600">Digital Museum Collection</p>
               </div>
@@ -105,7 +123,7 @@ export default function HomePage() {
       <footer className="py-6 sm:py-8 text-center px-4" style={{ background: 'var(--museum-dark-brown)', color: 'white' }}>
         <div className="container mx-auto">
           <p className="mb-3 sm:mb-4 text-sm sm:text-base">
-            &copy; 2025 Kipahare DigiGuide. Museum Digital Innovation.
+            &copy; 2025 Ki Pahare DigiGuide. Museum Digital Innovation.
           </p>
           <Link
             href="/login"

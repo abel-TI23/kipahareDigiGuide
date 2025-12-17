@@ -1,5 +1,5 @@
 /**
- * Kipahare DigiGuide - Utility Functions
+ * Ki Pahare DigiGuide - Utility Functions
  * Common helper functions for the application
  */
 
@@ -216,7 +216,7 @@ export function generateQRCode(artifactId: number): string {
   const timestamp = Date.now().toString(36);
   const random = Math.random().toString(36).substring(2, 8);
   
-  return `KIPAHARE-${artifactId}-${timestamp}-${random}`.toUpperCase();
+  return `KI_PAHARE-${artifactId}-${timestamp}-${random}`.toUpperCase();
 }
 
 /**
@@ -227,15 +227,15 @@ export function generateQRCode(artifactId: number): string {
  * Parse QR code to extract artifact ID
  */
 export function parseQRCode(code: string): number | null {
-  const match = code.match(/KIPAHARE-(\d+)-/);
-  return match ? parseInt(match[1], 10) : null;
+  const match = code.match(/KI_PAHARE-(\d+)-/);
+  return match ? parseInt(match[1]) : null;
 }
 
 /**
- * Validate QR code format
+ * Validates QR code format
  */
 export function isValidQRCode(code: string): boolean {
-  return /^KIPAHARE-\d+-\d+-[A-Z0-9]+$/.test(code);
+  return /^KI_PAHARE-\d+-\d+-[A-Z0-9]+$/.test(code);
 }
 
 // ============================================
