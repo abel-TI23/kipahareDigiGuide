@@ -3,29 +3,12 @@
  * Authentication setup for admin users
  */
 
-import NextAuth from 'next-auth';
-import type { NextAuthConfig } from 'next-auth';
+import NextAuth, { AuthOptions } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import { sql } from '@vercel/postgres';
 import bcrypt from 'bcryptjs';
 
-declare module 'next-auth' {
-  interface Session {
-    user: {
-      id: number;
-      username: string;
-      email: string;
-    };
-  }
-
-  interface User {
-    id: number;
-    username: string;
-    email: string;
-  }
-}
-
-export const authConfig: NextAuthConfig = {
+export const authConfig: AuthOptions = {
   providers: [
     Credentials({
       credentials: {
@@ -64,7 +47,8 @@ export const authConfig: NextAuthConfig = {
 
           // Return user object (password_hash excluded)
           return {
-            id: user.id,
+            id: user.id.toString(),
+            name: user.username,
             username: user.username,
             email: user.email,
           };
@@ -94,16 +78,6 @@ export const authConfig: NextAuthConfig = {
         (session.user as any).email = token.email as string;
       }
       return session;
-    },
-    authorized({ auth, request: { nextUrl } }) {
-      const isLoggedIn = !!auth?.user;
-      const isOnAdmin = nextUrl.pathname.startsWith('/admin');
-      
-      if (isOnAdmin && !isLoggedIn) {
-        return false; // Redirect to login
-      }
-      
-      return true;
     },
   },
   session: {
