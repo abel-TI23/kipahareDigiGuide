@@ -8,11 +8,28 @@ import { NextResponse } from 'next/server';
 
 export default withAuth(
   function middleware(req) {
+    const { pathname } = req.nextUrl;
+    
+    // Allow GET requests to /api/artifacts (public read)
+    if (pathname.startsWith('/api/artifacts') && req.method === 'GET') {
+      return NextResponse.next();
+    }
+    
     return NextResponse.next();
   },
   {
     callbacks: {
-      authorized: ({ token }) => !!token,
+      authorized: ({ token, req }) => {
+        const { pathname } = req.nextUrl;
+        
+        // Allow GET requests to /api/artifacts (public read)
+        if (pathname.startsWith('/api/artifacts') && req.method === 'GET') {
+          return true;
+        }
+        
+        // Require auth for everything else
+        return !!token;
+      },
     },
     pages: {
       signIn: '/login',
@@ -20,7 +37,7 @@ export default withAuth(
   }
 );
 
-// Protect all admin routes and API routes (except auth)
+// Protect all admin routes and write operations on API artifacts
 export const config = {
   matcher: [
     '/admin/:path*',

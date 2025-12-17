@@ -27,7 +27,13 @@ export default function ArtifactGrid() {
       const response = await fetch('/api/artifacts');
       
       if (!response.ok) {
-        throw new Error('Failed to fetch artifacts');
+        throw new Error(`HTTP ${response.status}: Failed to fetch artifacts`);
+      }
+      
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Server returned non-JSON response. Please check your database connection.');
       }
       
       const data = await response.json();
@@ -41,7 +47,7 @@ export default function ArtifactGrid() {
       }
     } catch (err) {
       console.error('Error fetching artifacts:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : 'An error occurred while loading artifacts');
       setArtifacts([]);
       setFilteredArtifacts([]);
     } finally {
