@@ -8,7 +8,7 @@ import 'next-auth';
 declare module 'next-auth' {
   interface Session {
     user: {
-      id: string;
+      id: string | number;
       name: string;
       email: string;
     };
