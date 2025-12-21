@@ -5,9 +5,10 @@ import { useState } from 'react';
 interface RatingFormProps {
   artifactId: number;
   onSuccess?: () => void;
+  darkMode?: boolean;
 }
 
-export default function RatingForm({ artifactId, onSuccess }: RatingFormProps) {
+export default function RatingForm({ artifactId, onSuccess, darkMode = false }: RatingFormProps) {
   const [rating, setRating] = useState<number>(0);
   const [hoveredRating, setHoveredRating] = useState<number>(0);
   const [visitorName, setVisitorName] = useState('');
@@ -67,12 +68,12 @@ export default function RatingForm({ artifactId, onSuccess }: RatingFormProps) {
 
   if (submitted) {
     return (
-      <div className="museum-card p-6 text-center">
+      <div className={`museum-card p-6 text-center ${darkMode ? 'bg-gray-800 bg-opacity-90 backdrop-blur-sm' : ''}`}>
         <div className="text-4xl mb-3">✓</div>
-        <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--museum-brown)' }}>
+        <h3 className={`text-xl font-bold mb-2 ${darkMode ? 'text-white' : ''}`} style={!darkMode ? { color: 'var(--museum-brown)' } : {}}>
           Thank You!
         </h3>
-        <p className="text-gray-600">
+        <p className={darkMode ? 'text-gray-300' : 'text-gray-600'}>
           Your feedback has been submitted successfully.
         </p>
       </div>
@@ -80,15 +81,15 @@ export default function RatingForm({ artifactId, onSuccess }: RatingFormProps) {
   }
 
   return (
-    <div className="museum-card p-6">
-      <h3 className="text-xl font-bold mb-4" style={{ color: 'var(--museum-brown)' }}>
+    <div className={`museum-card p-6 ${darkMode ? 'bg-gray-800 bg-opacity-90 backdrop-blur-sm' : ''}`}>
+      <h3 className={`text-xl font-bold mb-4 ${darkMode ? 'text-white' : ''}`} style={!darkMode ? { color: 'var(--museum-brown)' } : {}}>
         Rate This Artifact
       </h3>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Star Rating */}
         <div>
-          <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--museum-brown)' }}>
+          <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-200' : ''}`} style={!darkMode ? { color: 'var(--museum-brown)' } : {}}>
             Your Rating *
           </label>
           <div className="flex gap-2">
@@ -103,7 +104,7 @@ export default function RatingForm({ artifactId, onSuccess }: RatingFormProps) {
                 style={{
                   color: (hoveredRating || rating) >= star 
                     ? 'var(--museum-orange)' 
-                    : '#d1d5db'
+                    : darkMode ? '#4B5563' : '#d1d5db'
                 }}
               >
                 ★
@@ -111,7 +112,7 @@ export default function RatingForm({ artifactId, onSuccess }: RatingFormProps) {
             ))}
           </div>
           {rating > 0 && (
-            <p className="text-sm text-gray-600 mt-2">
+            <p className={`text-sm mt-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
               {rating === 1 && 'Poor'}
               {rating === 2 && 'Fair'}
               {rating === 3 && 'Good'}
@@ -123,7 +124,7 @@ export default function RatingForm({ artifactId, onSuccess }: RatingFormProps) {
 
         {/* Name (Optional) */}
         <div>
-          <label htmlFor="visitorName" className="block text-sm font-semibold mb-2" style={{ color: 'var(--museum-brown)' }}>
+          <label htmlFor="visitorName" className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-200' : ''}`} style={!darkMode ? { color: 'var(--museum-brown)' } : {}}>
             Your Name (optional)
           </label>
           <input
@@ -131,14 +132,18 @@ export default function RatingForm({ artifactId, onSuccess }: RatingFormProps) {
             id="visitorName"
             value={visitorName}
             onChange={(e) => setVisitorName(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--museum-orange)]"
+            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+              darkMode 
+                ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-[var(--museum-orange)]' 
+                : 'border-gray-300 focus:ring-[var(--museum-orange)]'
+            }`}
             placeholder="John Doe"
           />
         </div>
 
         {/* Email (Optional) */}
         <div>
-          <label htmlFor="email" className="block text-sm font-semibold mb-2" style={{ color: 'var(--museum-brown)' }}>
+          <label htmlFor="email" className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-200' : ''}`} style={!darkMode ? { color: 'var(--museum-brown)' } : {}}>
             Email (optional)
           </label>
           <input
@@ -146,14 +151,18 @@ export default function RatingForm({ artifactId, onSuccess }: RatingFormProps) {
             id="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--museum-orange)]"
+            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+              darkMode 
+                ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-[var(--museum-orange)]' 
+                : 'border-gray-300 focus:ring-[var(--museum-orange)]'
+            }`}
             placeholder="john@example.com"
           />
         </div>
 
         {/* Comment (Optional) */}
         <div>
-          <label htmlFor="comment" className="block text-sm font-semibold mb-2" style={{ color: 'var(--museum-brown)' }}>
+          <label htmlFor="comment" className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-200' : ''}`} style={!darkMode ? { color: 'var(--museum-brown)' } : {}}>
             Your Comment (optional)
           </label>
           <textarea
@@ -161,14 +170,22 @@ export default function RatingForm({ artifactId, onSuccess }: RatingFormProps) {
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             rows={4}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--museum-orange)]"
+            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+              darkMode 
+                ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-[var(--museum-orange)]' 
+                : 'border-gray-300 focus:ring-[var(--museum-orange)]'
+            }`}
             placeholder="Share your thoughts about this artifact..."
           />
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+          <div className={`p-3 border rounded ${
+            darkMode 
+              ? 'bg-red-900 bg-opacity-50 border-red-700 text-red-200' 
+              : 'bg-red-100 border-red-400 text-red-700'
+          }`}>
             {error}
           </div>
         )}
