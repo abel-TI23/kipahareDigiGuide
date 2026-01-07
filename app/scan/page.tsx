@@ -3,11 +3,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5Qrcode } from 'html5-qrcode';
 
 export default function ScanPage() {
   const router = useRouter();
-  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
@@ -17,30 +17,26 @@ export default function ScanPage() {
     
     setScanning(true);
     
-    // Small delay to ensure DOM is ready
-    const timeoutId = setTimeout(() => {
+    const startScanner = async () => {
       try {
-        const scanner = new Html5QrcodeScanner(
-          'qr-reader',
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.0,
-            showTorchButtonIfSupported: true,
-            rememberLastUsedCamera: true,
-          },
-          false
-        );
+        const html5QrCode = new Html5Qrcode("qr-reader");
+        html5QrCodeRef.current = html5QrCode;
 
-        scannerRef.current = scanner;
+        const config = { 
+          fps: 10, 
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0,
+        };
 
-      const onScanSuccess = (decodedText: string) => {
+        const qrCodeSuccessCallback = (decodedText: string) => {
           console.log('QR Code detected:', decodedText);
           
           // Stop scanning
-          if (scannerRef.current) {
-            scannerRef.current.clear().catch(err => console.error('Error clearing scanner:', err));
-          }
+          html5QrCode.stop().then(() => {
+            console.log('Scanner stopped');
+          }).catch((err) => {
+            console.error('Error stopping scanner:', err);
+          });
           
           // Check if it's a URL to our artifacts
           try {
@@ -51,51 +47,46 @@ export default function ScanPage() {
               const artifactId = pathMatch[1];
               router.push(`/artifacts/${artifactId}`);
             } else {
-              // If not our artifact URL, try to open the link
               window.location.href = decodedText;
             }
           } catch (err) {
-            // Not a valid URL, show error
             setError('Invalid QR code. Please scan a valid artifact QR code.');
           }
         };
 
-        const onScanError = (errorMessage: string) => {
-          // Ignore common scanning errors - these are normal when no QR code is in view
-          if (!errorMessage.includes('NotFoundException') && !errorMessage.includes('No MultiFormat Readers')) {
-            console.warn('QR scan error:', errorMessage);
-          }
-        };
-
-        // Render scanner
-        try {
-          scanner.render(onScanSuccess, onScanError);
-          console.log('Scanner render called');
-          // Set ready after a short delay to let scanner initialize
-          setTimeout(() => {
-            setIsReady(true);
-            console.log('Scanner ready');
-          }, 500);
-        } catch (renderErr: any) {
-          console.error('Failed to start scanner:', renderErr);
-          if (renderErr.toString().includes('NotAllowedError') || renderErr.toString().includes('PermissionDenied')) {
-            setError('Camera access denied. Please click "Reset permission" in browser settings and allow camera access.');
-          } else if (renderErr.toString().includes('NotFoundError')) {
-            setError('No camera found on this device.');
-          } else {
-            setError(`Unable to start camera: ${renderErr.message || renderErr.toString()}`);
-          }
-          setScanning(false);
-        }
+        // Start scanning
+        await html5QrCode.start(
+          { facingMode: "environment" }, 
+          config,
+          qrCodeSuccessCallback,
+          undefined
+        );
+        
+        console.log('Scanner started successfully');
+        setIsReady(true);
+        
       } catch (err: any) {
-        console.error('Scanner initialization error:', err);
-        setError(`Initialization error: ${err.message || 'Unable to initialize scanner'}`);
+        console.error('Failed to start scanner:', err);
+        if (err.toString().includes('NotAllowedError') || err.toString().includes('PermissionDenied')) {
+          setError('Camera access denied. Please allow camera access and refresh the page.');
+        } else if (err.toString().includes('NotFoundError')) {
+          setError('No camera found on this device.');
+        } else {
+          setError(`Unable to start camera: ${err.message || err.toString()}`);
+        }
         setScanning(false);
       }
-    }, 100);
-    
+    };
+
+    // Small delay to ensure DOM is ready
+    setTimeout(startScanner, 100);
+
     return () => {
-      clearTimeout(timeoutId);
+      if (html5QrCodeRef.current) {
+        html5QrCodeRef.current.stop().catch((err) => {
+          console.error('Error stopping scanner on unmount:', err);
+        });
+      }
     };
   }, [router, scanning]);
 
