@@ -10,24 +10,16 @@ export default function ScanPage() {
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [permissionStatus, setPermissionStatus] = useState<string>('checking');
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    const initializeScanner = async () => {
-      if (scanning) return;
-      
+    if (scanning) return;
+    
+    setScanning(true);
+    
+    // Small delay to ensure DOM is ready
+    const timeoutId = setTimeout(() => {
       try {
-        // Request camera permission explicitly
-        setPermissionStatus('requesting');
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        
-        // Stop the stream immediately after getting permission
-        stream.getTracks().forEach(track => track.stop());
-        
-        setPermissionStatus('granted');
-        setScanning(true);
-        
-        // Initialize scanner after permission granted
         const scanner = new Html5QrcodeScanner(
           'qr-reader',
           {
@@ -35,6 +27,7 @@ export default function ScanPage() {
             qrbox: { width: 250, height: 250 },
             aspectRatio: 1.0,
             showTorchButtonIfSupported: true,
+            rememberLastUsedCamera: true,
           },
           false
         );
@@ -42,70 +35,63 @@ export default function ScanPage() {
         scannerRef.current = scanner;
 
       const onScanSuccess = (decodedText: string) => {
-        console.log('QR Code detected:', decodedText);
-        
-        // Stop scanning
-        scanner.clear().catch(err => console.error('Error clearing scanner:', err));
-        
-        // Check if it's a URL to our artifacts
-        try {
-          const url = new URL(decodedText);
-          const pathMatch = url.pathname.match(/\/artifacts\/(\d+)/);
+          console.log('QR Code detected:', decodedText);
           
-          if (pathMatch) {
-            const artifactId = pathMatch[1];
-            router.push(`/artifacts/${artifactId}`);
-          } else {
-            // If not our artifact URL, try to open the link
-            window.location.href = decodedText;
+          // Stop scanning
+          if (scannerRef.current) {
+            scannerRef.current.clear().catch(err => console.error('Error clearing scanner:', err));
           }
-        } catch (err) {
-          // Not a valid URL, show error
-          setError('Invalid QR code. Please scan a valid artifact QR code.');
-          setTimeout(() => {
-            setError(null);
-            // Restart scanner
-            scanner.render(onScanSuccess, onScanError);
-          }, 3000);
-        }
-      };
+          
+          // Check if it's a URL to our artifacts
+          try {
+            const url = new URL(decodedText);
+            const pathMatch = url.pathname.match(/\/artifacts\/(\d+)/);
+            
+            if (pathMatch) {
+              const artifactId = pathMatch[1];
+              router.push(`/artifacts/${artifactId}`);
+            } else {
+              // If not our artifact URL, try to open the link
+              window.location.href = decodedText;
+            }
+          } catch (err) {
+            // Not a valid URL, show error
+            setError('Invalid QR code. Please scan a valid artifact QR code.');
+          }
+        };
 
-      const onScanError = (errorMessage: string) => {
-        // Ignore common scanning errors
-        if (!errorMessage.includes('NotFoundException')) {
-          console.warn('QR scan error:', errorMessage);
-        }
-      };
+        const onScanError = (errorMessage: string) => {
+          // Ignore common scanning errors - these are normal when no QR code is in view
+          if (!errorMessage.includes('NotFoundException') && !errorMessage.includes('No MultiFormat Readers')) {
+            console.warn('QR scan error:', errorMessage);
+          }
+        };
 
-        try {
-          scanner.render(onScanSuccess, onScanError);
-        } catch (err: any) {
-          console.error('Failed to start scanner:', err);
-          setError(`Scanner error: ${err.message || 'Unable to start scanner'}`);
-          setScanning(false);
-          setPermissionStatus('error');
-        }
+        scanner.render(onScanSuccess, onScanError)
+          .then(() => {
+            console.log('Scanner started successfully');
+            setIsReady(true);
+          })
+          .catch((err: any) => {
+            console.error('Failed to start scanner:', err);
+            if (err.toString().includes('NotAllowedError') || err.toString().includes('PermissionDenied')) {
+              setError('Camera access denied. Please click "Reset permission" in browser settings and allow camera access.');
+            } else if (err.toString().includes('NotFoundError')) {
+              setError('No camera found on this device.');
+            } else {
+              setError(`Unable to start camera: ${err.message || err.toString()}`);
+            }
+            setScanning(false);
+          });
       } catch (err: any) {
-        console.error('Camera permission error:', err);
-        setPermissionStatus('denied');
-        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-          setError('Camera access denied. Please allow camera access in your browser settings.');
-        } else if (err.name === 'NotFoundError') {
-          setError('No camera found. Please ensure your device has a camera.');
-        } else {
-          setError(`Camera error: ${err.message || 'Unable to access camera'}`);
-        }
+        console.error('Scanner initialization error:', err);
+        setError(`Initialization error: ${err.message || 'Unable to initialize scanner'}`);
         setScanning(false);
       }
-    };
-
-    initializeScanner();
-
-    // Cleanup on unmount
+    }, 100);
+    
     return () => {
-      if (scannerRef.current) {
-        scannerRef.current.clear().catch(err => console.error('Error clearing scanner:', err));
-      }
+      clearTimeout(timeoutId);
     };
   }, [router, scanning]);
 
@@ -150,29 +136,11 @@ export default function ScanPage() {
 
           {/* Scanner Container */}
           <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 md:p-8 mb-6">
-            {permissionStatus === 'checking' && (
+            {!isReady && !error && (
               <div className="text-center py-8">
-                <p className="text-gray-600">Checking camera availability...</p>
-              </div>
-            )}
-            
-            {permissionStatus === 'requesting' && (
-              <div className="text-center py-8">
-                <p className="text-blue-600 font-semibold mb-2">📸 Camera Permission Required</p>
-                <p className="text-gray-600 text-sm">Please allow camera access in the browser prompt</p>
-              </div>
-            )}
-            
-            {permissionStatus === 'denied' && (
-              <div className="text-center py-8">
-                <p className="text-red-600 font-semibold mb-2">❌ Camera Access Denied</p>
-                <p className="text-gray-600 text-sm mb-4">Please enable camera in your browser settings and refresh the page</p>
-                <button 
-                  onClick={() => window.location.reload()} 
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  Retry
-                </button>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+                <p className="text-gray-600">Initializing camera...</p>
+                <p className="text-sm text-gray-500 mt-2">Please allow camera access if prompted</p>
               </div>
             )}
             
@@ -180,7 +148,13 @@ export default function ScanPage() {
             
             {error && (
               <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-700 text-sm text-center">{error}</p>
+                <p className="text-red-700 text-sm text-center font-semibold mb-2">⚠️ {error}</p>
+                <button 
+                  onClick={() => window.location.reload()} 
+                  className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full sm:w-auto mx-auto block"
+                >
+                  Try Again
+                </button>
               </div>
             )}
           </div>
