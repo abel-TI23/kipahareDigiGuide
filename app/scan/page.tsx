@@ -10,24 +10,36 @@ export default function ScanPage() {
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [permissionStatus, setPermissionStatus] = useState<string>('checking');
 
   useEffect(() => {
-    if (!scanning) {
-      setScanning(true);
+    const initializeScanner = async () => {
+      if (scanning) return;
       
-      // Initialize scanner
-      const scanner = new Html5QrcodeScanner(
-        'qr-reader',
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-          aspectRatio: 1.0,
-          showTorchButtonIfSupported: true,
-        },
-        false
-      );
+      try {
+        // Request camera permission explicitly
+        setPermissionStatus('requesting');
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        
+        // Stop the stream immediately after getting permission
+        stream.getTracks().forEach(track => track.stop());
+        
+        setPermissionStatus('granted');
+        setScanning(true);
+        
+        // Initialize scanner after permission granted
+        const scanner = new Html5QrcodeScanner(
+          'qr-reader',
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.0,
+            showTorchButtonIfSupported: true,
+          },
+          false
+        );
 
-      scannerRef.current = scanner;
+        scannerRef.current = scanner;
 
       const onScanSuccess = (decodedText: string) => {
         console.log('QR Code detected:', decodedText);
@@ -65,8 +77,29 @@ export default function ScanPage() {
         }
       };
 
-      scanner.render(onScanSuccess, onScanError);
-    }
+        try {
+          scanner.render(onScanSuccess, onScanError);
+        } catch (err: any) {
+          console.error('Failed to start scanner:', err);
+          setError(`Scanner error: ${err.message || 'Unable to start scanner'}`);
+          setScanning(false);
+          setPermissionStatus('error');
+        }
+      } catch (err: any) {
+        console.error('Camera permission error:', err);
+        setPermissionStatus('denied');
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          setError('Camera access denied. Please allow camera access in your browser settings.');
+        } else if (err.name === 'NotFoundError') {
+          setError('No camera found. Please ensure your device has a camera.');
+        } else {
+          setError(`Camera error: ${err.message || 'Unable to access camera'}`);
+        }
+        setScanning(false);
+      }
+    };
+
+    initializeScanner();
 
     // Cleanup on unmount
     return () => {
@@ -117,6 +150,32 @@ export default function ScanPage() {
 
           {/* Scanner Container */}
           <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 md:p-8 mb-6">
+            {permissionStatus === 'checking' && (
+              <div className="text-center py-8">
+                <p className="text-gray-600">Checking camera availability...</p>
+              </div>
+            )}
+            
+            {permissionStatus === 'requesting' && (
+              <div className="text-center py-8">
+                <p className="text-blue-600 font-semibold mb-2">📸 Camera Permission Required</p>
+                <p className="text-gray-600 text-sm">Please allow camera access in the browser prompt</p>
+              </div>
+            )}
+            
+            {permissionStatus === 'denied' && (
+              <div className="text-center py-8">
+                <p className="text-red-600 font-semibold mb-2">❌ Camera Access Denied</p>
+                <p className="text-gray-600 text-sm mb-4">Please enable camera in your browser settings and refresh the page</p>
+                <button 
+                  onClick={() => window.location.reload()} 
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+            
             <div id="qr-reader" className="w-full"></div>
             
             {error && (

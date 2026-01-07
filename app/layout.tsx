@@ -19,6 +19,9 @@ const lora = Lora({
 export const metadata: Metadata = {
   title: "Ki Pahare DigiGuide - Digital Museum Collection",
   description: "Explore historical treasures and ancient artifacts with our digital museum guide",
+  other: {
+    'permissions-policy': 'camera=*, microphone=*',
+  },
 };
 
 export default function RootLayout({
@@ -28,6 +31,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </head>
       <body
         className={`${playfairDisplay.variable} ${lora.variable} antialiased`}
       >
