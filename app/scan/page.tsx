@@ -67,22 +67,26 @@ export default function ScanPage() {
           }
         };
 
-        scanner.render(onScanSuccess, onScanError)
-          .then(() => {
-            console.log('Scanner started successfully');
+        // Render scanner
+        try {
+          scanner.render(onScanSuccess, onScanError);
+          console.log('Scanner render called');
+          // Set ready after a short delay to let scanner initialize
+          setTimeout(() => {
             setIsReady(true);
-          })
-          .catch((err: any) => {
-            console.error('Failed to start scanner:', err);
-            if (err.toString().includes('NotAllowedError') || err.toString().includes('PermissionDenied')) {
-              setError('Camera access denied. Please click "Reset permission" in browser settings and allow camera access.');
-            } else if (err.toString().includes('NotFoundError')) {
-              setError('No camera found on this device.');
-            } else {
-              setError(`Unable to start camera: ${err.message || err.toString()}`);
-            }
-            setScanning(false);
-          });
+            console.log('Scanner ready');
+          }, 500);
+        } catch (renderErr: any) {
+          console.error('Failed to start scanner:', renderErr);
+          if (renderErr.toString().includes('NotAllowedError') || renderErr.toString().includes('PermissionDenied')) {
+            setError('Camera access denied. Please click "Reset permission" in browser settings and allow camera access.');
+          } else if (renderErr.toString().includes('NotFoundError')) {
+            setError('No camera found on this device.');
+          } else {
+            setError(`Unable to start camera: ${renderErr.message || renderErr.toString()}`);
+          }
+          setScanning(false);
+        }
       } catch (err: any) {
         console.error('Scanner initialization error:', err);
         setError(`Initialization error: ${err.message || 'Unable to initialize scanner'}`);
